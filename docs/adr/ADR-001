@@ -1,0 +1,36 @@
+# ADR-001: Table Format Selection
+
+## Status
+Accepted
+
+## Context
+The Bronze lakehouse layer requires a table format to sit on top of
+object storage and provide ACID transactions, schema evolution, and
+MERGE support. The selection criteria were engine compatibility,
+ecosystem openness, and broad market relevance.
+
+## Decision
+Apache Iceberg was selected over Delta Lake as the table format
+for this project.
+
+## Reasoning
+Iceberg is engine-agnostic and built on open standards, providing
+native compatibility across Spark, Flink, Trino, and DuckDB without
+vendor lock-in. While Delta Lake offers tighter out-of-box integration
+within the Databricks ecosystem, Iceberg's ecosystem neutrality better
+serves the portfolio objective of broad market appeal. Iceberg is
+production-standard at organisations including Apple, Netflix, and
+Snowflake, and is natively supported by AWS Glue — the catalog
+selected for this project's production environment.
+
+## Consequences
+**Positive:**
+- Compatible with any major compute engine
+- Natively supported by AWS Glue, Snowflake, and Databricks
+- Positions the project for broad DE and AI engineering role relevance
+
+**Risks and limitations:**
+- Slightly less out-of-box tooling than Delta Lake in Databricks-
+  specific environments
+- Databricks-focused roles may expect Delta Lake familiarity —
+  mitigated by the transferability of core table format concepts

@@ -1,0 +1,56 @@
+# ADR-004: Catalog and Storage Strategy
+
+## Status
+Accepted
+
+## Context
+Apache Iceberg tables require a catalog to register table metadata
+and enable discovery by query engines. Without a catalog, Iceberg
+tables are not queryable by name — they exist only as unregistered
+files on object storage. The catalog decision must balance local
+development speed, production reliability, cost, and compatibility
+with the AWS-based storage layer selected for this project.
+
+## Decision
+A two-environment catalog strategy was adopted:
+
+- **Local development**: Filesystem catalog — no external
+  dependencies, zero setup cost, fast iteration
+- **Production (AWS)**: AWS Glue catalog — managed metadata
+  service with native S3 and PyIceberg integration
+
+## Reasoning
+- The filesystem catalog eliminates environment setup overhead
+  during development, allowing focus on pipeline logic rather
+  than infrastructure configuration
+- AWS Glue is the market-standard managed catalog for
+  Iceberg-on-S3 deployments, with a free tier sufficient for
+  development-scale usage and native support across Spark,
+  Athena, and PyIceberg
+- Catalog connection details are externalized as environment-
+  specific configuration, ensuring pipeline code remains
+  unchanged between environments — only the catalog backend
+  differs. This follows standard Python configuration management
+  practice and maintains environment parity without code duplication
+
+## Consequences
+**Positive:**
+- Filesystem catalog enables fast local iteration with zero
+  infrastructure dependency
+- Glue catalog provides a managed, production-grade metadata
+  layer aligned with AWS ecosystem standards
+- Environment-agnostic pipeline code reduces maintenance overhead
+  and simplifies future environment additions
+- AWS experience adds cross-cloud breadth to complement existing
+  Azure background
+
+**Risks and limitations:**
+- Heavy Glue usage beyond the free tier will incur costs —
+  mitigated by monitoring usage at scale and deferring that
+  decision until pipeline volume warrants it
+- Maintaining two catalog configurations requires discipline
+  to keep environment parity — mitigated by centralized
+  configuration management
+- Local filesystem catalog does not support concurrent access,
+  meaning it is unsuitable for any multi-process development
+  scenarios

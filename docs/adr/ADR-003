@@ -1,0 +1,64 @@
+# ADR-003: Ingestion Pattern
+
+## Status
+Accepted
+
+## Context
+The ingestion layer must retrieve 20 years of NBA data from a
+rate-limited public API and load it reliably into the Bronze
+lakehouse layer. The key engineering constraints are: API
+response slowness, large initial data volume, pipeline
+resumability on failure, and long-term data consistency
+across incremental runs.
+
+## Decision
+- **Land raw, transform later**: Bronze layer stores data exactly
+  as received from the API, with no transformations applied
+  at ingestion time
+- **Season-by-season chunked ingestion**: Data is retrieved one
+  season at a time, starting with the oldest season first
+- **Incremental writes via Iceberg MERGE**: Each write is an
+  atomic upsert operation rather than a blind append
+- **Bookkeeping via a dedicated Iceberg metadata table**: Pipeline
+  state is tracked inside the platform, recording the last
+  successfully completed season per entity type
+- **Idempotent pipeline**: Rerunning the pipeline for any season
+  produces the same result with no duplicate data
+
+## Reasoning
+- Chunking by season reduces per-call data volume, providing a
+  practical workaround for API rate limiting and response latency
+- Landing raw data preserves source fidelity and defers business
+  logic decisions to the appropriate transformation layer,
+  protecting against premature data loss
+- Iceberg's atomic transaction support ensures incremental writes
+  are safe — a failed write does not corrupt existing data
+- Bookkeeping inside the Iceberg platform makes pipeline state
+  queryable, auditable, and visible to lineage tracking tools
+  introduced
+- Idempotency via MERGE operations ensures pipeline reruns are
+  safe, eliminating duplicate data risk
+
+## Consequences
+**Positive:**
+- Chunked ingestion with bookkeeping enables reliable resumption
+  after failure without reprocessing completed seasons
+- Idempotent MERGE operations ensure data consistency across runs
+- Raw data preservation provides a complete audit trail and
+  flexibility for downstream transformation decisions
+
+**Risks and limitations:**
+- Bookkeeping metadata table corruption or sync failure could
+  cause seasons to be skipped or reprocessed — mitigated by
+  pipeline startup validation checks
+- Raw data preservation increases storage requirements and
+  defers data cleaning costs to the Silver layer
+- MERGE operations carry higher computational cost than
+  append-only writes — acceptable at current scale but requires
+  monitoring at volume
+- Oldest-first chunking assumes historical seasons are immutable
+  — retroactive NBA data corrections would require manual
+  reprocessing of affected seasons
+- SEASON_ID format inconsistency between API endpoints is a
+  known data quality issue, deliberately deferred to Silver
+  layer normalization

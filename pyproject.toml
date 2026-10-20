@@ -6,17 +6,10 @@ requires-python = ">=3.11"
 
 [build-system]
 requires = ["setuptools"]
-build-backend = "setuptools.backends.legacy:build"
-```
-*Why: Replaces the older `setup.py`. Centralizes project metadata in one place and is required if you ever want to publish to PyPI.*
+build-backend = "setuptools.build_meta"
 
----
 
-### What to Keep in Mind
-
-**Secrets and credentials — never commit them.**
-Use a `.env` file locally and a library like `python-dotenv` to load them. Add `.env` to `.gitignore` immediately. Provide a `.env.example` with placeholder values so others know what variables are needed.
-```
-# .env.example
-DATABASE_URL=your_db_url_here
-API_KEY=your_api_key_here
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests that hit real external APIs or systems",
+]

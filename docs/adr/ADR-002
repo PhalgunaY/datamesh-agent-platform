@@ -1,0 +1,54 @@
+# ADR-002: Data Source Selection
+
+## Status
+Accepted
+
+## Context
+The Bronze ingestion layer requires a data source that satisfies
+five criteria: free availability with a stable API, entity richness
+with multiple related tables, sufficient data volume to make pipeline
+design non-trivial, natural fit for AI agent queries, and
+transferability of engineering patterns to real business domains.
+
+## Decision
+Sports data via the NBA API, accessed through the nba_api
+Python library, was selected as the primary data source.
+
+## Reasoning
+The NBA API satisfies all five evaluation criteria:
+
+- **Availability**: Publicly accessible without authentication,
+  actively maintained, and stable across seasons
+- **Data Richness**: Multiple related entities — teams, players,
+  games, and season statistics — enabling dimensional modelling
+  and meaningful agent queries
+- **Data Volume**: 20+ years of historical data across thousands
+  of games and players, sufficient to make ingestion design
+  non-trivial
+- **AI Query Fit**: Natural language queries such as "who were
+  the top scorers in 2018-19" are meaningful and directly
+  testable against this dataset
+- **Resume Translatability**: Player performance over seasons
+  maps directly to customer metrics over quarters; player
+  transfers between teams mirror slowly changing dimensions
+  in business data warehouses
+
+The nba_api Python package provides a maintained wrapper around
+stats.nba.com, eliminating raw HTTP handling complexity in the
+ingestion layer.
+
+## Consequences
+**Positive:**
+- Rich relational structure with multiple connected entities
+  supports dimensional modelling
+- Historical depth enables time series analysis patterns
+- Python-native client reduces ingestion complexity
+
+**Risks and limitations:**
+- stats.nba.com is not a purpose-built API — response times of
+  5-10 seconds per call require robust retry and rate limiting
+  logic in the ingestion layer
+- API schema changes are unversioned and unannounced, requiring
+  active monitoring for upstream changes
+- Sports domain requires explicit framing in interviews to
+  demonstrate transferability to business use cases
